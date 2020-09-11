@@ -1,6 +1,6 @@
 # Sign In with Apple Button for Android
 
-A library for adding [Sign in With Apple](https://developer.apple.com/sign-in-with-apple/) to Android apps.
+A library for adding [Sign In With Apple](https://developer.apple.com/sign-in-with-apple/) to Android apps.
 
 [![CircleCI](https://circleci.com/gh/willowtreeapps/sign-in-with-apple-button-android.svg?style=svg&circle-token=94aaaafd543585e19434a36498601ec291d29e62)](https://circleci.com/gh/willowtreeapps/sign-in-with-apple-button-android) [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat)]() [![Public Yes](https://img.shields.io/badge/Public-yes-green.svg?style=flat)]()
 
@@ -10,11 +10,7 @@ This library includes a `SignInWithAppleButton` class. You can style the button 
 
 ![Apple HIG themed button in black with default corner radius](docs/hig-button-black.png) ![Apple HIG themed button in white with rounder corners](docs/hig-button-white.png) ![Apple HIG themed button in outlined white with even rounder corners](docs/hig-button-white-outline.png)
 
-For Material Design apps, we also have a Material-themed button class, {TODO: name of material button class}.
-
-TODO: Images of Material-themed buttons, maybe animated to show ripple
-
-You can add one of these buttons to your login screen. When tapped, the button presents Apple's OAuth login flow in a web view. After the user signs in, your callback will receive an authorization code. You can then pass the authorization code to your backend's third party login endpoint.
+You can add this button to your login screen. When tapped, the button presents Apple's OAuth login flow in a web view. After the user signs in, your callback will receive an authorization code. You can then pass the authorization code to your backend's third party login endpoint.
 
 ![OAuth flow diagram](docs/flow-diagram.png)
 
@@ -58,101 +54,122 @@ From this setup, you will need two OAuth arguments to use this library:
 
 ### Installation
 
-TODO: How to include the app with Maven, directly from source, etc. … whatever the common methods are
+Include as a dependency using Gradle:
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.willowtreeapps:signinwithapplebutton:0.3'
+}
+```
+
+Snapshot versions are also available.
+
+```groovy
+repositories {
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+dependencies {
+    implementation 'com.willowtreeapps:signinwithapplebutton:0.4-SNAPSHOT'
+}
+```
 
 ### Configuration
 
-Add a `SignInWithAppleButton` or {TODO: Material button class name} to your login screen's layout.
+Add a `SignInWithAppleButton` to your login screen's layout.
 
 Configure the button's appearance properties in layout XML:
 
-- `buttonColorStyle`: Specify `"black"` (default), `"white"`, or `"whiteWithOutline"`.
-- `signInText`: Specify `"signInWithApple"` (default) or `"continueWithApple"` to specify the text of the button.
-- `cornerRadius`: Specify a dimension like `"4dp"` (default), `"0dp"`, `"8px"`, etc.
+- `style`: Specify a style, `"@style/SignInWithAppleButton.Black"` (default), `"@style/SignInWithAppleButton.White"`, or `"@style/SignInWithAppleButton.WhiteOutline"`.
+- `sign_in_with_apple_button_textType`: Specify an enum value, `"signInWithApple"` (default) or `"continueWithApple"`.
+- `sign_in_with_apple_button_cornerRadius`: Specify a dimension, like `"4dp"` (default), `"0dp"`, `"8px"`, etc.
 
 > These options are based on the style options from Apple's [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple/overview/).
 
-Configure the button's service authentication properties, either in layout XML or at runtime:
+At runtime, create an instance of `SignInWithAppleConfiguration`, supplying these values:
 
 - `clientId`: Use the client ID value from service setup.
 - `redirectUri`: Use the redirect URI value from service setup.
 - `scope`: Specify a space-delimited string of OpenID scopes, like "name email".
 
-Finally, configure the `callback` property at runtime with an instance of `AppleSignInCallback`. To create that object, you'll implement success and failure callback functions.
+> According to our understanding of OpenID Connect, the "openid" scope should be included. But at this time of writing, that causes the authentication page to fail to initialize. Beta idiosyncrasies like these are documented in [How Sign in with Apple differs from OpenID Connect](https://bitbucket.org/openid/connect/src/default/How-Sign-in-with-Apple-differs-from-OpenID-Connect.md).
 
-#### Examples
+Configure the button with a `FragmentManager` to present the login interface, the service you created above, and a callback to receive the success/failure/cancel result.
 
-Set up a `SignInWithApple` button via XML, then set the callback in code:
+#### Example
 
-```xml
-<com.willowtreeapps.signinwithapplebutton.view.SignInWithAppleButton
-    android:id="@+id/sign_in_with_apple_button"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    app:buttonColorStyle="black"
-    app:signInText="signInWithApple"
-    app:cornerRadius="4dp"
-    app:clientId="com.your.client.id.here"
-    app:redirectUri="https://your-redirect-uri.com/callback"
-    app:scope="email" />
-```
-
-…
-
-```kotlin
-signInWithAppleButton.callback = object : AppleSignInCallback {
-    …
-}
-```
-
-Or leave the service properties out of XML, and enter them in code:
+Set up a `SignInWithAppleButton` via XML:
 
 ```xml
 <com.willowtreeapps.signinwithapplebutton.view.SignInWithAppleButton
     android:id="@+id/sign_in_with_apple_button"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    app:buttonColorStyle="black"
-    app:signInText="signInWithApple"
-    app:cornerRadius="4dp" />
+    style="@style/SignInWithAppleButton.Black"
+    app:sign_in_with_apple_button_textType="signInWithApple"
+    app:sign_in_with_apple_button_cornerRadius="4dp" />
 ```
 
-…
+In your Activity, create the `SignInWithAppleService`, then configure the button:
 
 ```kotlin
-val signInWithAppleButton = findViewById(R.id.sign_in_with_apple_button)
+override fun onCreate(savedInstanceState: Bundle?) {
+    ...
 
-signInWithAppleButton.clientId = "com.your.client.id.here"
-signInWithAppleButton.redirectUri = "https://your-redirect-uri.com/callback"
-signInWithAppleButton.scope = "email"
+    val configuration = SignInWithAppleConfiguration(
+        clientId = "com.your.client.id.here",
+        redirectUri = "https://your-redirect-uri.com/callback",
+        scope = "email"
+    )
 
-signInWithAppleButton.callback = object : AppleSignInCallback {
-    …
+    val signInWithAppleButton = findViewById(R.id.sign_in_with_apple_button)
+    signInWithAppleButton.setUpSignInWithAppleOnClick(supportFragmentManager, configuration) { result ->
+        when (result) {
+            is SignInWithAppleResult.Success -> {
+                // Handle success
+            }
+            is SignInWithAppleResult.Failure -> {
+                // Handle failure
+            }
+            is SignInWithAppleResult.Cancel -> {
+                // Handle user cancel
+            }
+        }
+    }
 }
 ```
+
+> If configuring the button from Java, you can supply an implementation of `SignInWithAppleCallback` instead of a single callback function.
 
 ### Behavior
 
 When the user taps the button, it will present a web view configured to let the user authorize your service as an OAuth client of their Apple ID. After the user authorizes access, Apple will forward to the redirect URI and include an authorization code. The web view will intercept this request and locate the authorization code.
 
-If the user completes authentication, your `AppleSignInCallback` object will receive an `AppleSignInSuccess` value in a call to `onSignInSuccess`. Your backend endpoint can then phone home to Apple to [exchange the authorization code for tokens](https://developer.apple.com/documentation/signinwithapplerestapi/generate_and_validate_tokens), completing login.
+If the user completes authentication, your callback will receive a `SignInWithAppleResult.Success` with the authorization code. Your backend endpoint can then phone home to Apple to [exchange the authorization code for tokens](https://developer.apple.com/documentation/signinwithapplerestapi/generate_and_validate_tokens), completing login.
 
-If instead there is a failure, your `AppleSignInCallback` object will receive that error in a call to `onSignInFailure`.
+If instead there is a failure, your callback will receive a `SignInWithAppleResult.Failure` with the error.
 
-If the user dismisses the authentication screen intentionally, your `AppleSignInCallback` object won't receive any call.
+If the user dismisses the authentication screen intentionally, you will receive a `SignInWithAppleResult.Cancel`.
+
+> If you supplied a `SignInWithAppleCallback` implementation rather than a single callback function, you will instead receive a call to the corresponding callback method.
 
 ## Sample application
 
-We've included a sample Android app in the `sample` folder. This app mirrors [Apple's sample project](https://developer.apple.com/documentation/authenticationservices/adding_the_sign_in_with_apple_flow_to_your_app) for the [iOS Sign In with Apple button](https://developer.apple.com/documentation/authenticationservices/asauthorizationappleidbutton), so you can compare the two.
+We've included a sample Android app in the `sample` folder. This app is comparable to [Apple's sample project](https://developer.apple.com/documentation/authenticationservices/adding_the_sign_in_with_apple_flow_to_your_app) for the [iOS Sign In with Apple button](https://developer.apple.com/documentation/authenticationservices/asauthorizationappleidbutton).
 
 The sample app demonstrates:
 
-1. Adding the button to your layout, in `activity_sample.xml`
-2. Configuring the button with service details, in {TODO: where?}
-3. Configuring the button with a callback object, in `SampleActivity.kt`
-4. Making use of the authorization code on success, in `onSignInSuccess`
+1. Adding the button and styling it, in `activity_sample.xml`
+2. Configuring the button with service details and a client, in `SampleActivity.onCreate()` or `SampleJavaActivity.onCreate()`
+3. Making use of the authorization code on success, in the callback
 
 You can adjust this sample project with your service configuration and try signing in.
+
+> `SampleActivity`, the Kotlin sample implementation, is launched by the sample app. To view `SampleJavaActivity`, you would need to update the activity name in the sample app's manifest XML.
 
 ## Related projects
 
@@ -160,19 +177,24 @@ You can adjust this sample project with your service configuration and try signi
     - [Juice](https://developer.apple.com/documentation/authenticationservices/adding_the_sign_in_with_apple_flow_to_your_app), Apple's sample project, as seen in [WWDC 2019, Session 706 - Introducing Sign In with Apple](https://developer.apple.com/videos/play/wwdc19/706/)
     - [@react-native-community/apple-authentication](https://github.com/react-native-community/apple-authentication), a React Native library
     - [OmniAuth::Apple](https://github.com/nhosoya/omniauth-apple), an OmniAuth strategy for Rails web apps
-- Backend components offering validaton of Sign In with Apple tokens
+- Backend components for Sign In with Apple
     - [apple-auth](https://github.com/ananay/apple-auth), an NPM package for JavaScript backends
     - [apple_id](https://github.com/nov/apple_id), a gem for Ruby backends
 
 ## Roadmap
 
-- Apple HIG-themed Sign In with Apple button
-- Material-themed Sign In with Apple button
-- Publication
-- 1.0 after Sign In with Apple itself is released
+- Use a Chrome Custom Tab on Marshmallow and later so users know they are not being phished
+    - This will require consuming apps to configure App Links, but it's the Right Way to do it for OAuth security
+- Keep up with changes to Sign In with Apple during beta; 1.0 when the service itself is 1.0
+- Standard Android ripple effect? Material-themed Sign In with Apple button?
 
 ## Contributing
 
 Contributions are welcome. Please see the [Contributing guidelines](CONTRIBUTING.md).
 
 This project has adopted a [code of conduct](CODE_OF_CONDUCT.md) defined by the [Contributor Covenant](http://contributor-covenant.org), the same used by the [Swift language](https://swift.org) and countless other open source software teams.
+
+## Disclaimer
+
+The Apple logo belongs to Apple. It's included in this library because it's specified in Apple's [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple/overview/). We're using it in good faith according to its intended purpose. As a consumer of this library, please read the HIG and avoid misusing Apple's intellectual property.
+
