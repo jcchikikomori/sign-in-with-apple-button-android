@@ -5,12 +5,12 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import android.webkit.ValueCallback
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import com.willowtreeapps.signinwithapplebutton.SignInWithAppleConfiguration
 import com.willowtreeapps.signinwithapplebutton.SignInWithAppleResult
 import com.willowtreeapps.signinwithapplebutton.SignInWithAppleService
 import com.willowtreeapps.signinwithapplebutton.constants.Strings
@@ -22,6 +22,7 @@ import com.willowtreeapps.signinwithapplebutton.view.SignInWithAppleButton.Compa
  */
 internal class SignInWebViewClient(
     private val fragment: SignInWebViewDialogFragment,
+    private val config: SignInWithAppleConfiguration,
     private val attempt: SignInWithAppleService.AuthenticationAttempt,
     private val callback: (SignInWithAppleResult) -> Unit
 ) : WebViewClient() {
@@ -44,30 +45,21 @@ internal class SignInWebViewClient(
     // TODO: Optimizations
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     override fun onPageStarted(view: WebView?, url: String, favicon: Bitmap?) {
-        Log.d(TAG, "STEP 2: onPageStarted : $url")
         fragment.updateSubtitle(url)
-        checkStatusFromURL(view, url)
-        // processURL(url)
+        setCallback(Uri.parse(url))
         super.onPageStarted(view, url, favicon)
     }
 
     // TODO: Optimizations
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     override fun onPageFinished(view: WebView?, url: String) {
-        Log.d(TAG, "STEP 3: onPageFinished : $url")
-        // Log.d(TAG, "gotError? $gotError")
-        // checkStatusFromURL(view, url)
-        // processURL(url)
-        // finish
         hideProgress()
-        // Log.d(TAG, "SHOULD GO BACK? : " + shouldAllowBack())
         super.onPageFinished(view, url)
     }
 
     override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, url: String) {
         Log.d(TAG, "onReceivedError: $url")
         gotError = true // set status to avoid override by onPageFinished()
-        super.onReceivedError(view, errorCode, description, url)
         callback(SignInWithAppleResult.Failure(NetworkErrorException("onReceivedError")))
     }
 
@@ -80,83 +72,54 @@ internal class SignInWebViewClient(
                 view?.loadUrl(url.toString())
                 true
             }
-            url.toString().contains(attempt.redirectUri) -> {
-                Log.d(SIGN_IN_WITH_APPLE_LOG_TAG, "Web view was forwarded to redirect URI")
-                val codeParameter = url.getQueryParameter("code")
-                val stateParameter = url.getQueryParameter("state")
-                when {
-                    codeParameter == null -> {
-                        callback(SignInWithAppleResult.Failure(IllegalArgumentException("code not returned")))
-                    }
-                    stateParameter != attempt.state -> {
-                        callback(SignInWithAppleResult.Failure(IllegalArgumentException("state does not match")))
-                    }
-                    else -> {
-                        callback(SignInWithAppleResult.Success(codeParameter))
-                    }
-                }
-                true
-            }
             else -> {
                 false
             }
         }
     }
 
-    /*
-    private fun processURL(url: String) {
-        if (url.startsWith(redirectUrl.getSuccessUrl())) {
-            checkoutSuccess = true
-        } else if (url.startsWith(redirectUrl.getCancelUrl())) {
-            checkoutCancelled = true
-        } else if (url.startsWith(redirectUrl.getFailureUrl())) {
-            checkoutFailed = true
-        }
-    }
-     */
-
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
-    private fun checkStatusFromURL(view: WebView?, url: String) {
-        Toast.makeText(fragment.context, "checkStatusFromURL: $url", Toast.LENGTH_LONG).show()
-        if (!gotError) {
-            if (url.contains(attempt.redirectUri)) {
-                // Evaluate Javascript
-                // This is based on PayMaya WebView document
-                val scriptForV1 = "(function() { return (document.getElementsByClassName('link')[0].href); })();"
-                // Log.d(TAG, "USING VERSION 2??? $usesVersion2")
-                // Evaluate with existing webview
-                view?.evaluateJavascript(scriptForV1, ValueCallback<String> { string ->
-                    Log.d(TAG, "contains: $string")
-                    // val stringFormatted = string.replace("\"".toRegex(), "")
-                    /*
-                    if (stringFormatted == redirectUrl.getSuccessUrl()) {
-                        checkoutSuccess = true
-                    } else if (stringFormatted == redirectUrl.getCancelUrl()) {
-                        checkoutCancelled = true
-                    } else if (stringFormatted == redirectUrl.getFailureUrl()) {
-                        checkoutFailed = true
-                    }
-                     */
-                })
-                hideProgress()
-                // setDisableGoingBack(false);
+    private fun setCallback(url: Uri) {
+        // workaround
+        val redirectUrlResult: String = attempt.redirectUri.replace("/handler", "/result")
+        if (url.toString().contains(redirectUrlResult)) {
+            // TODO: getQueryParameter by scope
+            Log.d(SIGN_IN_WITH_APPLE_LOG_TAG, "Web view was forwarded to redirect URI")
+            val codeParameter = url.getQueryParameter("uuid") // based on thorough test of latest Apple's REST API
+            // val stateParameter = url.getQueryParameter("state") // not exists on the latest Apple's REST API
+            val authParameter = url.getQueryParameter("auth")
+            // parse scopes
+            val scopeParameter: String = config.scope
+            val scopes: Array<String> = scopeParameter.split(" ").toTypedArray()
+            val scopesMutable = mutableMapOf<String, String>()
+            for (scope in scopes) {
+                scopesMutable[scope] = url.getQueryParameter(scope).toString()
+            }
+            when {
+                codeParameter == null -> {
+                    callback(SignInWithAppleResult.Failure(IllegalArgumentException("code not returned")))
+                }
+                /*
+                stateParameter != attempt.state || authParameter != attempt.state -> {
+                    callback(SignInWithAppleResult.Failure(IllegalArgumentException("state does not match")))
+                }
+                 */
+                // workaround
+                authParameter == "success" -> {
+                    attempt.state
+                    callback(SignInWithAppleResult.Success(codeParameter, scopesMutable))
+                }
+                else -> {
+                    callback(SignInWithAppleResult.Success(codeParameter, scopesMutable))
+                }
             }
         } else {
-            // error
-            failed = true
+            Toast.makeText(
+                fragment.context,
+                "onPageStarted: $url \n" + "redirectUrl: ${attempt.redirectUri}",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
-
-    /*
-    fun onBackPressed() {
-        if (success) {
-            callback(SignInWithAppleResult.Success("COODEDED"))
-        }
-        else if (failed) {
-            callback(SignInWithAppleResult.Failure("TEST"))
-        }
-    }
-     */
 
     private fun hideProgress() {
         // val progress: ProgressBar findViewById(R.id.a)

@@ -13,6 +13,15 @@ import com.willowtreeapps.signinwithapplebutton.SignInWithAppleCallback;
 import com.willowtreeapps.signinwithapplebutton.SignInWithAppleService;
 import com.willowtreeapps.signinwithapplebutton.view.SignInWithAppleButton;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.util.stream.Collectors;
+
+import kotlin.collections.MapsKt;
+
 import static android.widget.Toast.LENGTH_SHORT;
 
 public class SampleJavaActivity extends AppCompatActivity {
@@ -35,8 +44,10 @@ public class SampleJavaActivity extends AppCompatActivity {
 
         SignInWithAppleCallback callback = new SignInWithAppleCallback() {
             @Override
-            public void onSignInWithAppleSuccess(@NonNull String authorizationCode) {
-                Toast.makeText(SampleJavaActivity.this, authorizationCode, LENGTH_SHORT).show();
+            public void onSignInWithAppleSuccess(@NotNull String authorizationCode, @NotNull Map<String, String> scopes) {
+                Toast.makeText(SampleJavaActivity.this,
+                        "CODE: " + authorizationCode,
+                        LENGTH_SHORT).show();
             }
 
             @Override

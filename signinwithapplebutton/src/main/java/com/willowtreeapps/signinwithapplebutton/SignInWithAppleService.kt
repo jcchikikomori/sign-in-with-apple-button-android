@@ -18,7 +18,7 @@ class SignInWithAppleService(
     init {
         val fragmentIfShown =
             fragmentManager.findFragmentByTag(fragmentTag) as? SignInWebViewDialogFragment
-        fragmentIfShown?.configure(callback)
+        fragmentIfShown?.configureCallback(callback)
     }
 
     internal data class AuthenticationAttempt(
@@ -67,7 +67,7 @@ class SignInWithAppleService(
                     .parse("https://${Strings.APPLEID_URL}/auth/authorize")
                     .buildUpon().apply {
                         appendQueryParameter("response_type", "code")
-                        appendQueryParameter("v", "1.1.6")
+                        appendQueryParameter("v", "1.1.6") // TODO: Change version
                         appendQueryParameter("client_id", configuration.clientId)
                         appendQueryParameter("redirect_uri", configuration.redirectUri)
                         appendQueryParameter("scope", configuration.scope)
@@ -84,7 +84,8 @@ class SignInWithAppleService(
 
     fun show() {
         val fragment = SignInWebViewDialogFragment.newInstance(AuthenticationAttempt.create(configuration))
-        fragment.configure(callback)
+        fragment.configureCallback(callback)
+        fragment.configure(configuration)
         fragment.show(fragmentManager, fragmentTag)
     }
 }
