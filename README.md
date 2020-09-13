@@ -95,6 +95,7 @@ At runtime, create an instance of `SignInWithAppleConfiguration`, supplying thes
 - `clientId`: Use the client ID value from service setup.
 - `redirectUri`: Use the redirect URI value from service setup.
 - `scope`: Specify a space-delimited string of OpenID scopes, like "name email".
+- `verifyState`: A explicit workaround for instances that has no state parameter being returned
 
 > According to our understanding of OpenID Connect, the "openid" scope should be included. But at this time of writing, that causes the authentication page to fail to initialize. Beta idiosyncrasies like these are documented in [How Sign in with Apple differs from OpenID Connect](https://bitbucket.org/openid/connect/src/default/How-Sign-in-with-Apple-differs-from-OpenID-Connect.md).
 
@@ -123,7 +124,8 @@ override fun onCreate(savedInstanceState: Bundle?) {
     val configuration = SignInWithAppleConfiguration(
         clientId = "com.your.client.id.here",
         redirectUri = "https://your-redirect-uri.com/callback",
-        scope = "email"
+        scope = "email",
+        true
     )
 
     val signInWithAppleButton = findViewById(R.id.sign_in_with_apple_button)
