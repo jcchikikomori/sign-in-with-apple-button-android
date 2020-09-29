@@ -2,7 +2,6 @@ package com.willowtreeapps.signinwithapplebutton.view
 
 import android.annotation.SuppressLint
 import android.content.DialogInterface
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -12,13 +11,12 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.webkit.WebSettings
 import android.webkit.WebView
-import android.widget.Toast
+import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
-import com.willowtreeapps.signinwithapplebutton.BuildConfig
 import com.willowtreeapps.signinwithapplebutton.R
+import com.willowtreeapps.signinwithapplebutton.SignInWithAppleConfiguration
 import com.willowtreeapps.signinwithapplebutton.SignInWithAppleResult
 import com.willowtreeapps.signinwithapplebutton.SignInWithAppleService
 import com.willowtreeapps.signinwithapplebutton.constants.Strings
@@ -44,12 +42,17 @@ internal class SignInWebViewDialogFragment : DialogFragment() {
 
     private lateinit var authenticationAttempt: SignInWithAppleService.AuthenticationAttempt
     private var callback: ((SignInWithAppleResult) -> Unit)? = null
+    private var config: SignInWithAppleConfiguration? = null
 
     private val webViewIfCreated: WebView?
         get() = view as? WebView
 
-    fun configure(callback: (SignInWithAppleResult) -> Unit) {
+    fun configureCallback(callback: (SignInWithAppleResult) -> Unit) {
         this.callback = callback
+    }
+
+    fun configure(config: SignInWithAppleConfiguration) {
+        this.config = config
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,28 +75,17 @@ internal class SignInWebViewDialogFragment : DialogFragment() {
         // val webView: WebView? = dialog?.window?.findViewById(R.id.web_view)
         webView.settings?.javaScriptEnabled  = true
         webView.settings?.javaScriptCanOpenWindowsAutomatically = true
-        webView.webViewClient = SignInWebViewClient(this, authenticationAttempt, ::onCallback)
+        webView.webViewClient =
+            config?.let { SignInWebViewClient(this, it, authenticationAttempt, ::onCallback) }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            // chromium, enable hardware acceleration
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        } else {
-            // older android version, disable hardware acceleration
-            webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-        }
+        // chromium, enable hardware acceleration
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
         if (savedInstanceState != null) {
             savedInstanceState.getBundle(WEB_VIEW_KEY)?.run {
                 webView.restoreState(this)
             }
         } else {
-            if (BuildConfig.DEBUG) {
-                Toast.makeText(
-                    context,
-                    "Loading: " + authenticationAttempt.authenticationUri,
-                    Toast.LENGTH_LONG
-                ).show()
-            }
             webView.loadUrl(authenticationAttempt.authenticationUri)
         }
 
@@ -102,13 +94,13 @@ internal class SignInWebViewDialogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         // finish setup toolbar
         (activity as AppCompatActivity?)!!.setSupportActionBar(toolbar)
-        if ((activity as AppCompatActivity?)!!.supportActionBar != null) {
-            (activity as AppCompatActivity?)!!.supportActionBar!!.setDisplayHomeAsUpEnabled(true)
-            (activity as AppCompatActivity?)!!.supportActionBar!!.title = Strings.APPlEID_TITLE
-            (activity as AppCompatActivity?)!!.supportActionBar!!.subtitle = "Loading..."
+        val actionBar: ActionBar? = (activity as AppCompatActivity?)?.supportActionBar
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true)
+            actionBar.title = Strings.APPlEID_TITLE
+            actionBar.subtitle = "Loading..."
         }
     }
 
@@ -151,8 +143,9 @@ internal class SignInWebViewDialogFragment : DialogFragment() {
     }
 
     fun updateSubtitle(string: String) {
-        if ((activity as AppCompatActivity?)!!.supportActionBar != null) {
-            (activity as AppCompatActivity?)!!.supportActionBar!!.subtitle = string
+        val actionBar: ActionBar? = (activity as AppCompatActivity?)?.supportActionBar
+        if (actionBar != null) {
+            actionBar.subtitle = string
         }
     }
 
