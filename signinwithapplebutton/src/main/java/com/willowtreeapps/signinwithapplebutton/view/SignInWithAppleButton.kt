@@ -1,6 +1,7 @@
 package com.willowtreeapps.signinwithapplebutton.view
 
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
@@ -31,14 +32,28 @@ class SignInWithAppleButton @JvmOverloads constructor(
 
     init {
         val attributes =
-            context.theme.obtainStyledAttributes(attrs, R.styleable.SignInWithAppleButton, 0, R.style.SignInWithAppleButton)
+            context.theme.obtainStyledAttributes(
+                attrs,
+                R.styleable.SignInWithAppleButton,
+                0,
+                R.style.SignInWithAppleButton
+            )
 
         // Style
         val background = attributes.getDrawable(R.styleable.SignInWithAppleButton_android_background)
-        val icon = attributes.getResourceId(R.styleable.SignInWithAppleButton_android_drawableLeft, -1)
-        val iconSize = attributes.getDimensionPixelSize(R.styleable.SignInWithAppleButton_sign_in_with_apple_button_iconSize, -1)
+        val icon = attributes.getResourceId(
+            R.styleable.SignInWithAppleButton_android_drawableLeft,
+            -1
+        )
+        val iconSize = attributes.getDimensionPixelSize(
+            R.styleable.SignInWithAppleButton_sign_in_with_apple_button_iconSize,
+            -1
+        )
         val textColor = attributes.getColorStateList(R.styleable.SignInWithAppleButton_android_textColor)
-        val textSize = attributes.getDimensionPixelSize(R.styleable.SignInWithAppleButton_android_textSize, -1)
+        val textSize = attributes.getDimensionPixelSize(
+            R.styleable.SignInWithAppleButton_android_textSize,
+            -1
+        )
         val textStyle = attributes.getInt(R.styleable.SignInWithAppleButton_android_textStyle, 0)
         val fontFamily = attributes.getString(R.styleable.SignInWithAppleButton_android_fontFamily)
         // val textAppearance = attributes.getResourceId(R.styleable.SignInWithAppleButton_android_textAppearance, -1)
@@ -61,6 +76,12 @@ class SignInWithAppleButton @JvmOverloads constructor(
             resources.getDimension(R.dimen.sign_in_with_apple_button_cornerRadius_default)
         )
 
+        // Button label margin
+        // val buttonLabelMarginStart = attributes.getDimension(
+        //     R.styleable.SignInWithAppleButton_sign_in_with_apple_button_buttonLabelMarginStart,
+        //     0f
+        // )
+
         attributes.recycle()
 
         this.background = background?.mutate()
@@ -82,6 +103,22 @@ class SignInWithAppleButton @JvmOverloads constructor(
         if (textSize != -1) {
             textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize.toFloat())
         }
+
+        // set button label margin (programmatically)
+        // if (buttonLabelMarginStart > 0f) run {
+        //     val r: Resources = context.resources
+        //     val buttonLabelMarginStartPx = TypedValue.applyDimension(
+        //         TypedValue.COMPLEX_UNIT_DIP,
+        //         buttonLabelMarginStart,
+        //         r.displayMetrics
+        //     ).toInt()
+        //     val params = LayoutParams(
+        //         LayoutParams.WRAP_CONTENT,
+        //         LayoutParams.WRAP_CONTENT
+        //     )
+        //     params.setMargins(buttonLabelMarginStartPx, top, right, bottom)
+        //     textView.layoutParams = params
+        // }
 
         // set default typeface
         val typeface = if (fontFamily == null) {

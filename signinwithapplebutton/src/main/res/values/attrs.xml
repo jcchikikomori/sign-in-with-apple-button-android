@@ -24,5 +24,8 @@
 
         <!-- Corner radius -->
         <attr name="sign_in_with_apple_button_cornerRadius" format="dimension" />
+
+        <!-- Button label margin (UNSTABLE) -->
+        <!-- <attr name="sign_in_with_apple_button_buttonLabelMarginStart" format="dimension" /> -->
     </declare-styleable>
 </resources>
